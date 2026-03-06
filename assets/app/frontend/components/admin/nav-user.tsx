@@ -21,20 +21,17 @@ import {
 } from "@/components/ui/sidebar"
 
 export function NavUser() {
-  const { currentUser } = usePage<SharedProps>().props
+  const { currentUser, currentIdentity } = usePage<SharedProps>().props
   const { isMobile } = useSidebar()
 
-  const name = currentUser?.name ?? "User"
-  const email = currentUser?.email ?? ""
-  const initials = currentUser?.name ? userInitials(currentUser.name) : "U"
-  const accountId = currentUser?.accountId
-  const appPath = (path: string) => {
-    if (accountId) {
-      return path.replace(/^\/app/, `/app/${accountId}`)
-    }
-
-    return path.startsWith("/app/") ? "/app" : path
-  }
+  const displayName = currentUser?.name ?? currentIdentity?.name
+  const name = displayName ?? "User"
+  const email =
+    currentUser?.email ?? currentIdentity?.email ?? "user@example.com"
+  const initials = displayName ? userInitials(displayName) : "U"
+  const accountId = currentUser?.accountId ?? currentIdentity?.defaultAccountId
+  const hasAccount = accountId != null
+  const appPath = (path: string) => path.replace(/^\/app/, `/app/${accountId}`)
 
   return (
     <SidebarMenu>
@@ -77,19 +74,25 @@ export function NavUser() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem
-                onClick={() => router.visit(appPath("/app/settings"))}
-              >
-                <UserCircle />
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.visit(appPath("/app"))}>
-                <ArrowLeft />
-                Back to App
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
+            {hasAccount && (
+              <>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    onClick={() => router.visit(appPath("/app/settings"))}
+                  >
+                    <UserCircle />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => router.visit(appPath("/app"))}
+                  >
+                    <ArrowLeft />
+                    Back to App
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+              </>
+            )}
             <DropdownMenuItem onClick={() => router.delete("/logout")}>
               <LogOut />
               Log out

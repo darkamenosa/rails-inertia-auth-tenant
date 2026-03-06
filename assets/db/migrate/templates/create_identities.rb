@@ -14,13 +14,21 @@ class CreateIdentities < ActiveRecord::Migration[8.1]
       ## Rememberable
       t.datetime :remember_created_at
 
+      ## Trackable
+      t.integer :sign_in_count, null: false, default: 0
+      t.datetime :current_sign_in_at
+      t.datetime :last_sign_in_at
+      t.string :current_sign_in_ip
+      t.string :last_sign_in_ip
+
       ## OmniAuth
       t.string :provider
       t.string :uid
 
       ## Custom
-      t.boolean :password_set_by_user, default: false, null: false
-      t.boolean :staff, default: false, null: false
+      t.boolean :password_set_by_user, null: false, default: false
+      t.boolean :staff, null: false, default: false
+      t.datetime :suspended_at
 
       t.timestamps null: false
     end

@@ -18,10 +18,21 @@ export type CurrentUser = {
   accountName: string | null
 }
 
+export type CurrentIdentity = {
+  id: number
+  name: string | null
+  email: string
+  staff: boolean
+  defaultAccountId: number | null
+  defaultAccountName: string | null
+  defaultAccountRole: string | null
+}
+
 // Shared props available on every Inertia page
 export type SharedProps = {
   flash?: FlashData
-  currentUser: CurrentUser | null
+  currentUser?: CurrentUser | null
+  currentIdentity?: CurrentIdentity | null
 }
 
 // Pagination data from Pagy (via pagination_props helper)
@@ -36,7 +47,17 @@ export type PaginationData = {
   hasNext: boolean
 }
 
-// Admin: Customer (identity) list item
+// Access token types
+export type AccessToken = {
+  id: number
+  name: string
+  permission: "read" | "write"
+  tokenPrefix: string | null
+  createdAt: string
+  lastUsedAt: string | null
+}
+
+// Admin customer types
 export type AdminCustomer = {
   id: number
   email: string
@@ -48,7 +69,6 @@ export type AdminCustomer = {
   createdAt: string
 }
 
-// Admin: Customer detail (show page)
 export type AdminCustomerDetail = {
   id: number
   email: string
@@ -61,7 +81,6 @@ export type AdminCustomerDetail = {
   memberships: AdminCustomerMembership[]
 }
 
-// Admin: Customer membership (account membership within detail)
 export type AdminCustomerMembership = {
   id: number
   accountId: number
@@ -69,5 +88,8 @@ export type AdminCustomerMembership = {
   role: string
   name: string
   active: boolean
+  accountCancelled: boolean
+  daysUntilDeletion: number | null
+  canReactivate: boolean
   createdAt: string
 }

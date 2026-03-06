@@ -1,13 +1,7 @@
 Rails.application.routes.draw do
-  # Auth (Devise)
   devise_for :identities,
     path: "",
-    path_names: {
-      sign_in: "login",
-      sign_out: "logout",
-      registration: "register",
-      sign_up: ""
-    },
+    path_names: { sign_in: "login", sign_out: "logout", registration: "register", sign_up: "" },
     controllers: {
       sessions: "identities/sessions",
       registrations: "identities/registrations",
@@ -15,33 +9,39 @@ Rails.application.routes.draw do
       omniauth_callbacks: "identities/omniauth_callbacks"
     }
 
-  # App (authenticated identities with at least one active membership)
-  authenticate :identity, ->(identity) { identity.active_for_authentication? && identity.users.active.exists? } do
-    scope "app/:account_id", constraints: { account_id: /\d+/ } do
-      namespace :app, path: "" do
-        get "", to: "dashboards#show", as: :root
-        resource :dashboard, only: :show
-        resources :projects, only: [ :index ]
-        resource :settings, only: [ :show, :update, :destroy ]
-        resource :billing, only: :show
-      end
+  # App (authentication handled by controllers)
+  scope "app/:account_id", constraints: { account_id: /\d+/ } do
+    namespace :app, path: "" do
+      resource :dashboard, only: :show
+      resources :projects, only: [ :index ]
+      resource :settings, only: [ :show, :update, :destroy ]
+      resource :billing, only: :show
     end
-    get "app", to: "app/menus#show", as: :app
+    get "access_tokens", to: "app/access_tokens#index", as: :scoped_app_access_tokens
+    post "access_tokens", to: "app/access_tokens#create"
+    delete "access_tokens/:id", to: "app/access_tokens#destroy", as: :scoped_app_access_token
+    # /app/:account_id → redirect to dashboard
+    get "/", to: redirect { |params, _| "/app/#{params[:account_id]}/dashboard" }
+  end
+  get "app", to: "app/menus#show", as: :app
+  namespace :app, path: "app" do
+    resources :access_tokens, only: [ :index, :create, :destroy ]
+    resource :account_reactivation, only: :create
   end
 
-  # Admin + system routes (staff identities only)
-  authenticate :identity, ->(identity) { identity.active_for_authentication? && identity.staff? } do
+  # Admin (authorization handled by Admin::BaseController)
+  authenticate :identity, ->(identity) { identity.staff? } do
     namespace :admin do
       resource :dashboard, only: :show
-      resources :customers, only: [ :index, :show, :destroy ] do
+      resources :customers, only: [ :index, :show ], constraints: { id: /\d+/ } do
         scope module: :customers do
+          resource :account_reactivation, only: :create
           resource :suspension, only: [ :create, :destroy ]
           resource :staff_access, only: [ :create, :destroy ]
         end
       end
       namespace :customers do
         resource :bulk_suspension, only: [ :create, :destroy ]
-        resource :bulk_deletion, only: :create
       end
       resources :webhooks, only: [ :index ]
 
@@ -56,11 +56,9 @@ Rails.application.routes.draw do
         resource :billing, only: :show
       end
     end
-    get "admin", to: redirect("/admin/dashboard")
-
-    # System admin access — requires Identity.staff (not account role)
     mount MissionControl::Jobs::Engine, at: "/admin/jobs"
   end
+  get "admin", to: redirect("/admin/dashboard")
 
   # Redirect to localhost from 127.0.0.1
   constraints(host: "127.0.0.1") do

@@ -6,7 +6,7 @@ module Admin
       def create
         identities = Identity.where(id: safe_ids)
         count = identities.count
-        identities.update_all(suspended_at: Time.current)
+        identities.find_each(&:suspend)
 
         redirect_to admin_customers_path, notice: "#{count} customer(s) suspended."
       end
@@ -14,7 +14,7 @@ module Admin
       def destroy
         identities = Identity.where(id: safe_ids)
         count = identities.count
-        identities.update_all(suspended_at: nil)
+        identities.find_each(&:reactivate)
 
         redirect_to admin_customers_path, notice: "#{count} customer(s) reactivated."
       end

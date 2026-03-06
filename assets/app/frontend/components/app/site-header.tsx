@@ -14,12 +14,20 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 function getBreadcrumbs(url: string): { label: string; href?: string }[] {
   const path = url.split("?")[0].split("#")[0]
   const scopedMatch = path.match(/^\/app\/(\d+)(?:\/(.*))?$/)
-  if (!scopedMatch) {
+  let basePath = "/app"
+  let stripped = ""
+
+  if (scopedMatch) {
+    basePath = `/app/${scopedMatch[1]}`
+    stripped = scopedMatch[2] || ""
+  } else if (path === "/app") {
+    return [{ label: "Dashboard" }]
+  } else if (path.startsWith("/app/")) {
+    stripped = path.slice("/app/".length)
+  } else {
     return [{ label: "Dashboard" }]
   }
 
-  const accountId = scopedMatch[1]
-  const stripped = scopedMatch[2] || ""
   if (!stripped || stripped === "dashboard") {
     return [{ label: "Dashboard" }]
   }
@@ -31,7 +39,7 @@ function getBreadcrumbs(url: string): { label: string; href?: string }[] {
       .replace(/\b\w/g, (c) => c.toUpperCase()),
     href:
       i < segments.length - 1
-        ? `/app/${accountId}/${segments.slice(0, i + 1).join("/")}`
+        ? `${basePath}/${segments.slice(0, i + 1).join("/")}`
         : undefined,
   }))
 }

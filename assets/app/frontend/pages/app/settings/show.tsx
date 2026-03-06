@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Head, router, useForm, usePage } from "@inertiajs/react"
+import { Head, useForm, usePage } from "@inertiajs/react"
 import type { SharedProps } from "@/types"
 import { Info } from "lucide-react"
 
@@ -60,10 +60,9 @@ function ProfileSection({ name, email }: { name: string; email: string }) {
     name,
   })
 
-  transform((data) => ({ settings: data }))
-
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    transform((data) => ({ settings: data }))
     patch(withAccountScope(url, "/app/settings"))
   }
 
@@ -116,10 +115,9 @@ function PasswordSection() {
       password_confirmation: "",
     })
 
-  transform((data) => ({ settings: data }))
-
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    transform((data) => ({ settings: data }))
     patch(withAccountScope(url, "/app/settings"), {
       onSuccess: () => reset(),
     })
@@ -199,45 +197,71 @@ function OAuthPasswordSection() {
 function DangerZoneSection() {
   const page = usePage<SharedProps>()
   const { currentUser } = page.props
+  const { delete: destroy, processing } = useForm({})
   const [open, setOpen] = useState(false)
   const settingsPath = withAccountScope(page.url, "/app/settings")
+  const isOwner = currentUser?.role === "owner"
+  const deleteLabel = processing
+    ? isOwner
+      ? "Cancelling..."
+      : "Leaving..."
+    : isOwner
+      ? "Yes, cancel account"
+      : "Yes, leave account"
 
   function handleDelete() {
-    router.delete(settingsPath, {
+    destroy(settingsPath, {
       onSuccess: () => setOpen(false),
     })
   }
 
   return (
     <Section
-      title="Delete Account"
-      description="Permanently remove your account and all associated data."
+      title={isOwner ? "Cancel Account" : "Leave Account"}
+      description={
+        isOwner
+          ? "Cancel this account. You have 30 days to reactivate before data is permanently deleted."
+          : "Leave this account. Your data will be preserved but you will lose access."
+      }
     >
       <div className="flex items-center justify-between rounded-md border border-destructive/20 bg-destructive/5 px-4 py-3">
         <div>
-          <p className="text-sm font-medium">{currentUser?.name}</p>
+          <p className="text-sm font-medium">
+            {currentUser?.accountName ?? currentUser?.name}
+          </p>
           <p className="text-xs text-muted-foreground">{currentUser?.email}</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button variant="destructive" size="sm">
-              Delete account
+              {isOwner ? "Cancel account" : "Leave account"}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Delete your account?</DialogTitle>
+              <DialogTitle>
+                {isOwner ? "Cancel this account?" : "Leave this account?"}
+              </DialogTitle>
               <DialogDescription>
-                This will permanently delete your account, remove all your data,
-                and revoke access to all workspaces. This cannot be undone.
+                {isOwner
+                  ? "This account will be scheduled for deletion in 30 days. You can reactivate it during this period."
+                  : "You will lose access to this account. An admin can re-invite you later."}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setOpen(false)}>
-                Cancel
+              <Button
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={processing}
+              >
+                Go back
               </Button>
-              <Button variant="destructive" onClick={handleDelete}>
-                Yes, delete my account
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={processing}
+              >
+                {deleteLabel}
               </Button>
             </DialogFooter>
           </DialogContent>

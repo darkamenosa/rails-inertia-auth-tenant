@@ -29,12 +29,16 @@ function withAppPrefixAccount(path: string, account: string): string {
   return path.replace(/^\/app(?=\/|$)/, `/app/${account}`)
 }
 
-export function withAccountScope(url: string, path: string): string {
+export function withAccountScope(
+  url: string,
+  path: string,
+  fallbackAccount?: string | number | null
+): string {
   if (!path.startsWith("/")) {
     return path
   }
 
-  const account = accountScope(url)
+  const account = accountScope(url) ?? normalizeAccountId(fallbackAccount)
   if (!account) {
     if (path.startsWith("/app/")) {
       return "/app"
@@ -43,4 +47,27 @@ export function withAccountScope(url: string, path: string): string {
   }
 
   return withAppPrefixAccount(path, account)
+}
+
+export function withCurrentAccountScope(url: string, path: string): string {
+  if (!path.startsWith("/")) {
+    return path
+  }
+
+  const account = accountScope(url)
+  if (!account) {
+    return path
+  }
+
+  return withAppPrefixAccount(path, account)
+}
+
+function normalizeAccountId(
+  account: string | number | null | undefined
+): string | null {
+  if (account == null) {
+    return null
+  }
+
+  return account.toString()
 }

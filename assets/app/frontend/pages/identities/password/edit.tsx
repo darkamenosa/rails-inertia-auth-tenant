@@ -2,6 +2,7 @@ import { Head, Link, useForm, usePage } from "@inertiajs/react"
 import type { SharedProps } from "@/types"
 import { Command } from "lucide-react"
 
+import { csrfToken } from "@/lib/csrf-token"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -30,19 +31,19 @@ export default function ResetPasswordPage() {
     passwordConfirmation: "",
   })
 
-  transform((data) => ({
-    identity: {
-      password: data.password,
-      password_confirmation: data.passwordConfirmation,
-      reset_password_token: resetPasswordToken,
-    },
-  }))
-
   const errorMessage =
     (errors as Record<string, string | undefined>).base || flash?.alert
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    transform((data) => ({
+      authenticity_token: csrfToken(),
+      identity: {
+        password: data.password,
+        password_confirmation: data.passwordConfirmation,
+        reset_password_token: resetPasswordToken,
+      },
+    }))
     put("/password")
   }
 
@@ -75,7 +76,7 @@ export default function ResetPasswordPage() {
               </div>
             )}
             <form onSubmit={handleSubmit}>
-              <FieldGroup>
+              <FieldGroup className="gap-4">
                 <Field>
                   <FieldLabel htmlFor="password">New password</FieldLabel>
                   <Input

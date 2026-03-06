@@ -1,8 +1,8 @@
-import { useEffect, useRef } from "react"
 import { Head, Link, useForm, usePage } from "@inertiajs/react"
 import type { SharedProps } from "@/types"
 import { Command } from "lucide-react"
 
+import { csrfToken } from "@/lib/csrf-token"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -21,34 +21,30 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 
+type RegisterPageProps = SharedProps & {
+  googleOauthEnabled: boolean
+  googleOauthAuthenticityToken: string
+}
+
 export default function RegisterPage() {
-  const { flash } = usePage<SharedProps>().props
+  const { flash, googleOauthEnabled, googleOauthAuthenticityToken } =
+    usePage<RegisterPageProps>().props
   const { data, setData, post, processing, errors, transform } = useForm({
     name: "",
     email: "",
     password: "",
   })
 
-  transform((data) => ({
-    identity: { email: data.email, password: data.password },
-    user: { name: data.name },
-  }))
-
-  // Hydrate CSRF token on client only to avoid SSR mismatch
-  const csrfRef = useRef<HTMLInputElement>(null)
-  useEffect(() => {
-    if (csrfRef.current) {
-      csrfRef.current.value =
-        document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')
-          ?.content ?? ""
-    }
-  }, [])
-
   const errorMessage =
     (errors as Record<string, string | undefined>).base || flash?.alert
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    transform((data) => ({
+      authenticity_token: csrfToken(),
+      identity: { email: data.email, password: data.password },
+      user: { name: data.name },
+    }))
     post("/register")
   }
 
@@ -73,33 +69,41 @@ export default function RegisterPage() {
               <CardDescription>Get started with Enlead</CardDescription>
             </CardHeader>
             <CardContent>
-              <FieldGroup>
-                <Field>
-                  <form method="post" action="/auth/google_oauth2">
-                    <input
-                      ref={csrfRef}
-                      type="hidden"
-                      name="authenticity_token"
-                      defaultValue=""
-                    />
-                    <Button variant="outline" type="submit" className="w-full">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        className="mr-2 size-4"
-                      >
-                        <path
-                          d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"
-                          fill="currentColor"
+              <FieldGroup className="gap-5">
+                {googleOauthEnabled && (
+                  <>
+                    <Field>
+                      <form method="post" action="/auth/google_oauth2">
+                        <input
+                          type="hidden"
+                          name="authenticity_token"
+                          value={googleOauthAuthenticityToken}
+                          readOnly
                         />
-                      </svg>
-                      Continue with Google
-                    </Button>
-                  </form>
-                </Field>
-                <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
-                  Or continue with
-                </FieldSeparator>
+                        <Button
+                          variant="outline"
+                          type="submit"
+                          className="w-full"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            className="mr-2 size-4"
+                          >
+                            <path
+                              d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"
+                              fill="currentColor"
+                            />
+                          </svg>
+                          Continue with Google
+                        </Button>
+                      </form>
+                    </Field>
+                    <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
+                      Or continue with
+                    </FieldSeparator>
+                  </>
+                )}
                 {errorMessage && (
                   <div
                     role="alert"
@@ -109,7 +113,7 @@ export default function RegisterPage() {
                   </div>
                 )}
                 <form onSubmit={handleSubmit}>
-                  <FieldGroup>
+                  <FieldGroup className="gap-4">
                     <Field>
                       <FieldLabel htmlFor="name">Name</FieldLabel>
                       <Input

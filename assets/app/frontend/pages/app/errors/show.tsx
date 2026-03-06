@@ -1,4 +1,5 @@
 import { Head, Link, usePage } from "@inertiajs/react"
+import type { SharedProps } from "@/types"
 import { ArrowLeft, Home } from "lucide-react"
 
 import { withAccountScope } from "@/lib/account-scope"
@@ -12,8 +13,11 @@ interface Props {
 }
 
 export default function AppErrorPage({ status, title, message }: Props) {
-  const { url } = usePage()
-  const dashboardPath = withAccountScope(url, "/app/dashboard")
+  const page = usePage<SharedProps>()
+  const accountId =
+    page.props.currentUser?.accountId ??
+    page.props.currentIdentity?.defaultAccountId
+  const dashboardPath = withAccountScope(page.url, "/app/dashboard", accountId)
 
   return (
     <AppLayout>

@@ -19,7 +19,7 @@ const navLinks = [
 ]
 
 export function SiteHeader() {
-  const { currentUser } = usePage<SharedProps>().props
+  const { currentIdentity } = usePage<SharedProps>().props
   const currentUrl = usePage().url
   const [open, setOpen] = useState(false)
 
@@ -58,7 +58,7 @@ export function SiteHeader() {
 
         {/* Right: Auth + Mobile toggle */}
         <div className="ml-auto flex items-center gap-3">
-          {currentUser ? (
+          {currentIdentity ? (
             <Button asChild size="sm">
               <Link href="/app">Dashboard</Link>
             </Button>
@@ -122,7 +122,7 @@ export function SiteHeader() {
                 ))}
               </nav>
 
-              {!currentUser && (
+              {!currentIdentity && (
                 <div className="mt-auto flex flex-col gap-2 border-t p-4">
                   <Button asChild size="lg" className="w-full">
                     <Link href="/register" onClick={() => setOpen(false)}>

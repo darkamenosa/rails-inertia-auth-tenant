@@ -19,25 +19,44 @@ module App
     end
 
     def destroy
-      Current.identity.destroy
-      redirect_to root_path, notice: "Your account has been deleted."
+      if Current.user.owner?
+        Current.account.cancel(initiated_by: Current.user)
+        redirect_after_account_exit(
+          "Account scheduled for deletion. You have 30 days to reactivate."
+        )
+      else
+        Current.user.deactivate
+        redirect_after_account_exit("You've left this account.")
+      end
     end
 
     private
+
+      def redirect_after_account_exit(message)
+        if Current.identity.accessible_memberships.exists?
+          redirect_to app_path, notice: message, status: :see_other
+        else
+          clear_stored_location_for(:identity)
+          sign_out(:identity)
+          Current.reset
+          redirect_to root_path, notice: message, status: :see_other
+        end
+      end
+
       def update_profile
         if Current.user.update(profile_params)
-          redirect_to app_settings_path(account_id: Current.account.id), notice: "Profile updated."
+          redirect_to app_settings_path, notice: "Profile updated."
         else
-          redirect_to app_settings_path(account_id: Current.account.id), alert: Current.user.errors.full_messages.to_sentence
+          redirect_to app_settings_path, inertia: inertia_errors(Current.user)
         end
       end
 
       def update_password
         if Current.identity.update_with_password(password_params)
           bypass_sign_in(Current.identity)
-          redirect_to app_settings_path(account_id: Current.account.id), notice: "Password updated."
+          redirect_to app_settings_path, notice: "Password updated."
         else
-          redirect_to app_settings_path(account_id: Current.account.id), alert: Current.identity.errors.full_messages.to_sentence
+          redirect_to app_settings_path, inertia: inertia_errors(Current.identity)
         end
       end
 

@@ -1,4 +1,5 @@
 import { Link, usePage } from "@inertiajs/react"
+import type { SharedProps } from "@/types"
 import { Command } from "lucide-react"
 
 import { withAccountScope } from "@/lib/account-scope"
@@ -9,8 +10,10 @@ import {
 } from "@/components/ui/sidebar"
 
 export function TeamSwitcher() {
-  const { url } = usePage()
-  const scopedAppPath = withAccountScope(url, "/app")
+  const page = usePage<SharedProps>()
+  const { currentUser, currentIdentity } = page.props
+  const accountId = currentUser?.accountId ?? currentIdentity?.defaultAccountId
+  const scopedAppPath = withAccountScope(page.url, "/app", accountId)
 
   return (
     <SidebarMenu>

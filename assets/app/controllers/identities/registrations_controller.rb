@@ -3,23 +3,15 @@
 module Identities
   class RegistrationsController < Devise::RegistrationsController
     include InertiaFlash
+    rate_limit to: 10, within: 3.minutes, only: :create
 
     def new
-      render inertia: "identities/registration/new"
+      render inertia: "identities/registration/new", props: authentication_page_props
     end
 
     def create
-      email = sign_up_params[:email].to_s.strip
-      existing = email.present? ? Identity.find_by(email: email.downcase) : nil
-
-      if existing
-        redirect_to new_identity_registration_path,
-          inertia: { errors: { email: "Email already registered. Try signing in instead." } }
-        return
-      end
-
       build_resource(sign_up_params)
-      user_name = user_params[:name].presence || resource.email.to_s.split("@").first
+      user_name = params.dig(:user, :name).presence || resource.email.to_s.split("@").first
 
       Identity.transaction do
         resource.save!
@@ -32,12 +24,11 @@ module Identities
       redirect_to after_sign_up_path_for(resource)
     rescue ActiveRecord::RecordInvalid => error
       clean_up_passwords resource
-      errors = resource.errors.to_hash
-      errors.merge!(error.record.errors.to_hash) unless error.record == resource
-      redirect_to new_identity_registration_path, inertia: { errors: errors }
+      redirect_to new_identity_registration_path, inertia: { errors: registration_errors(error) }
     rescue ActiveRecord::RecordNotUnique
+      clean_up_passwords resource
       redirect_to new_identity_registration_path,
-        inertia: { errors: { email: "Email already registered. Try signing in instead." } }
+        inertia: { errors: duplicate_email_error }
     end
 
     protected
@@ -47,9 +38,23 @@ module Identities
       end
 
     private
+      def registration_errors(error)
+        errors = resource.errors.to_hash
+        errors.merge!(error.record.errors.to_hash) unless error.record == resource
 
-      def user_params
-        params.expect(user: [ :name ])
+        if email_taken_error?(resource) || email_taken_error?(error.record)
+          errors[:email] = duplicate_email_error[:email]
+        end
+
+        errors
+      end
+
+      def email_taken_error?(record)
+        record&.errors&.details&.fetch(:email, [])&.any? { |detail| detail[:error] == :taken }
+      end
+
+      def duplicate_email_error
+        { email: "We couldn't create your account. Try signing in or resetting your password." }
       end
   end
 end

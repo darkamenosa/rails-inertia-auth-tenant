@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Head, Link, router } from "@inertiajs/react"
-import type { AdminCustomerDetail } from "@/types"
+import type { AdminCustomerDetail, AdminCustomerMembership } from "@/types"
 import { ChevronLeft } from "lucide-react"
 
 import { formatDateShort } from "@/lib/format-date"
@@ -28,6 +28,8 @@ interface Props {
   customer: AdminCustomerDetail
   isSelf: boolean
 }
+
+type IdentityAction = "suspend" | "unsuspend" | "grant_staff" | "revoke_staff"
 
 // ─── Overview ───────────────────────────────────────────────────────────────
 
@@ -69,15 +71,70 @@ function OverviewCard({ customer }: { customer: AdminCustomerDetail }) {
   )
 }
 
+// ─── Membership Row ─────────────────────────────────────────────────────────
+
+function MembershipRow({
+  membership: m,
+  onReactivate,
+}: {
+  membership: AdminCustomerMembership
+  onReactivate: () => void
+}) {
+  return (
+    <tr className="border-t transition-colors hover:bg-muted/50">
+      <td className="px-4 py-3 text-sm font-medium">{m.accountName}</td>
+      <td className="px-4 py-3 text-sm">{m.name}</td>
+      <td className="px-4 py-3 text-sm">
+        <Badge variant="outline" className="text-muted-foreground capitalize">
+          {m.role}
+        </Badge>
+      </td>
+      <td className="px-4 py-3 text-sm">
+        {m.accountCancelled ? (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+              <StatusBadge status="cancelled" />
+              {m.daysUntilDeletion !== null && (
+                <span className="text-xs text-muted-foreground">
+                  {m.daysUntilDeletion}d left
+                </span>
+              )}
+            </div>
+            {m.canReactivate && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 w-fit"
+                onClick={onReactivate}
+              >
+                Reactivate account
+              </Button>
+            )}
+          </div>
+        ) : (
+          <StatusBadge status={m.active ? "active" : "inactive"} />
+        )}
+      </td>
+      <td className="px-4 py-3 text-sm">{formatDateShort(m.createdAt)}</td>
+    </tr>
+  )
+}
+
 // ─── Memberships ────────────────────────────────────────────────────────────
 
-function MembershipsCard({ customer }: { customer: AdminCustomerDetail }) {
+function MembershipsCard({
+  customer,
+  onReactivateAccount,
+}: {
+  customer: AdminCustomerDetail
+  onReactivateAccount: (membershipId: number, accountName: string) => void
+}) {
   const count = customer.memberships.length
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Memberships</CardTitle>
+        <CardTitle>Account memberships</CardTitle>
         <CardDescription>
           {count === 0
             ? "No account memberships"
@@ -109,29 +166,13 @@ function MembershipsCard({ customer }: { customer: AdminCustomerDetail }) {
             <tbody>
               {count > 0 ? (
                 customer.memberships.map((m) => (
-                  <tr
+                  <MembershipRow
                     key={m.id}
-                    className="border-t transition-colors hover:bg-muted/50"
-                  >
-                    <td className="px-4 py-3 text-sm font-medium">
-                      {m.accountName}
-                    </td>
-                    <td className="px-4 py-3 text-sm">{m.name}</td>
-                    <td className="px-4 py-3 text-sm">
-                      <Badge
-                        variant="outline"
-                        className="text-muted-foreground capitalize"
-                      >
-                        {m.role}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <StatusBadge status={m.active ? "active" : "inactive"} />
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      {formatDateShort(m.createdAt)}
-                    </td>
-                  </tr>
+                    membership={m}
+                    onReactivate={() =>
+                      onReactivateAccount(m.id, m.accountName)
+                    }
+                  />
                 ))
               ) : (
                 <tr>
@@ -151,39 +192,37 @@ function MembershipsCard({ customer }: { customer: AdminCustomerDetail }) {
   )
 }
 
-// ─── Account Card (sidebar) ─────────────────────────────────────────────────
+// ─── Identity Card (sidebar) ────────────────────────────────────────────────
 
-function AccountCard({
+function IdentityCard({
   customer,
   isSelf,
-  onDelete,
+  onSuspend,
+  onUnsuspend,
+  onGrantStaff,
+  onRevokeStaff,
 }: {
   customer: AdminCustomerDetail
   isSelf: boolean
-  onDelete: () => void
+  onSuspend: () => void
+  onUnsuspend: () => void
+  onGrantStaff: () => void
+  onRevokeStaff: () => void
 }) {
   const isSuspended = customer.status === "suspended"
-
-  const handleSuspend = () =>
-    router.post(`/admin/customers/${customer.id}/suspension`)
-  const handleReactivate = () =>
-    router.delete(`/admin/customers/${customer.id}/suspension`)
-  const handleGrantStaff = () =>
-    router.post(`/admin/customers/${customer.id}/staff_access`)
-  const handleRevokeStaff = () =>
-    router.delete(`/admin/customers/${customer.id}/staff_access`)
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Account</CardTitle>
+        <CardTitle>Identity</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col">
-        {/* Status */}
+        {/* Login status */}
         <div className="flex flex-col gap-2 pb-4">
+          <span className="text-sm font-medium">Login status</span>
           <div className="flex items-center gap-2">
             <StatusBadge status={customer.status} />
-            {customer.suspendedAt && (
+            {isSuspended && customer.suspendedAt && (
               <span className="text-xs text-muted-foreground">
                 since {formatDateShort(customer.suspendedAt)}
               </span>
@@ -192,7 +231,7 @@ function AccountCard({
           <p className="text-sm text-muted-foreground">
             {isSuspended
               ? "Suspended. Cannot sign in."
-              : "Account in good standing."}
+              : "Can sign in normally."}
           </p>
           {!isSelf &&
             (isSuspended ? (
@@ -200,16 +239,16 @@ function AccountCard({
                 size="sm"
                 variant="outline"
                 className="w-fit"
-                onClick={handleReactivate}
+                onClick={onUnsuspend}
               >
-                Reactivate
+                Unsuspend
               </Button>
             ) : (
               <Button
                 size="sm"
                 variant="outline"
                 className="w-fit"
-                onClick={handleSuspend}
+                onClick={onSuspend}
               >
                 Suspend
               </Button>
@@ -240,7 +279,7 @@ function AccountCard({
                 size="sm"
                 variant="outline"
                 className="w-fit"
-                onClick={handleRevokeStaff}
+                onClick={onRevokeStaff}
               >
                 Revoke access
               </Button>
@@ -249,33 +288,12 @@ function AccountCard({
                 size="sm"
                 variant="outline"
                 className="w-fit"
-                onClick={handleGrantStaff}
+                onClick={onGrantStaff}
               >
                 Grant access
               </Button>
             ))}
         </div>
-
-        {/* Danger zone */}
-        {!isSelf && (
-          <>
-            <div className="border-t" />
-            <div className="flex flex-col gap-2 pt-4">
-              <span className="text-sm font-medium">Danger zone</span>
-              <p className="text-sm text-muted-foreground">
-                Permanently delete this customer and all their data.
-              </p>
-              <Button
-                size="sm"
-                variant="destructive"
-                className="w-fit"
-                onClick={onDelete}
-              >
-                Delete customer
-              </Button>
-            </div>
-          </>
-        )}
       </CardContent>
     </Card>
   )
@@ -284,12 +302,120 @@ function AccountCard({
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 export default function AdminCustomerShow({ customer, isSelf }: Props) {
-  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [actionOpen, setActionOpen] = useState(false)
+  const [pendingAction, setPendingAction] = useState<IdentityAction | null>(
+    null
+  )
+  const [actionProcessing, setActionProcessing] = useState(false)
+  const [reactivateAccount, setReactivateAccount] = useState<{
+    membershipId: number
+    accountName: string
+  } | null>(null)
 
-  const handleDelete = () =>
-    router.delete(`/admin/customers/${customer.id}`, {
-      onSuccess: () => setDeleteOpen(false),
-    })
+  const actionMeta = (() => {
+    if (pendingAction === "suspend") {
+      return {
+        title: "Suspend this customer?",
+        description:
+          "This customer will no longer be able to sign in until unsuspended.",
+        confirmLabel: "Yes, suspend",
+        confirmVariant: "destructive" as const,
+      }
+    }
+
+    if (pendingAction === "unsuspend") {
+      return {
+        title: "Unsuspend this customer?",
+        description: "This customer will regain sign-in access immediately.",
+        confirmLabel: "Yes, unsuspend",
+        confirmVariant: "default" as const,
+      }
+    }
+
+    if (pendingAction === "grant_staff") {
+      return {
+        title: "Grant staff access?",
+        description:
+          "This customer will gain access to the admin panel immediately.",
+        confirmLabel: "Yes, grant access",
+        confirmVariant: "default" as const,
+      }
+    }
+
+    if (pendingAction === "revoke_staff") {
+      return {
+        title: "Revoke staff access?",
+        description: "This customer will lose access to the admin panel.",
+        confirmLabel: "Yes, revoke access",
+        confirmVariant: "destructive" as const,
+      }
+    }
+
+    return null
+  })()
+
+  function openActionDialog(action: IdentityAction) {
+    setPendingAction(action)
+    setActionOpen(true)
+  }
+
+  function handleActionOpenChange(open: boolean) {
+    setActionOpen(open)
+
+    if (!open && !actionProcessing) {
+      setPendingAction(null)
+    }
+  }
+
+  function handleActionConfirm() {
+    if (!pendingAction) return
+
+    const requestOptions = {
+      onSuccess: () => {
+        setActionOpen(false)
+        setPendingAction(null)
+      },
+      onFinish: () => setActionProcessing(false),
+    }
+
+    setActionProcessing(true)
+
+    if (pendingAction === "suspend") {
+      router.post(
+        `/admin/customers/${customer.id}/suspension`,
+        {},
+        requestOptions
+      )
+    } else if (pendingAction === "unsuspend") {
+      router.delete(
+        `/admin/customers/${customer.id}/suspension`,
+        requestOptions
+      )
+    } else if (pendingAction === "grant_staff") {
+      router.post(
+        `/admin/customers/${customer.id}/staff_access`,
+        {},
+        requestOptions
+      )
+    } else {
+      router.delete(
+        `/admin/customers/${customer.id}/staff_access`,
+        requestOptions
+      )
+    }
+  }
+
+  function handleReactivateAccount() {
+    if (!reactivateAccount) return
+
+    router.post(
+      `/admin/customers/${customer.id}/account_reactivation`,
+      { membership_id: reactivateAccount.membershipId },
+      {
+        onSuccess: () => setReactivateAccount(null),
+      }
+    )
+  }
 
   return (
     <AdminLayout>
@@ -315,38 +441,76 @@ export default function AdminCustomerShow({ customer, isSelf }: Props) {
         <div className="grid items-start gap-4 lg:grid-cols-5">
           <div className="flex flex-col gap-4 lg:col-span-3">
             <OverviewCard customer={customer} />
-            <MembershipsCard customer={customer} />
+            <MembershipsCard
+              customer={customer}
+              onReactivateAccount={(membershipId, accountName) =>
+                setReactivateAccount({ membershipId, accountName })
+              }
+            />
           </div>
           <div className="lg:col-span-2">
-            <AccountCard
+            <IdentityCard
               customer={customer}
               isSelf={isSelf}
-              onDelete={() => setDeleteOpen(true)}
+              onSuspend={() => openActionDialog("suspend")}
+              onUnsuspend={() => openActionDialog("unsuspend")}
+              onGrantStaff={() => openActionDialog("grant_staff")}
+              onRevokeStaff={() => openActionDialog("revoke_staff")}
             />
           </div>
         </div>
       </div>
 
-      {/* Delete confirmation */}
-      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      {/* Identity action confirmation */}
+      <Dialog open={actionOpen} onOpenChange={handleActionOpenChange}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete this customer?</DialogTitle>
+            <DialogTitle>{actionMeta?.title}</DialogTitle>
+            <DialogDescription>{actionMeta?.description}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => handleActionOpenChange(false)}
+              disabled={actionProcessing}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant={actionMeta?.confirmVariant}
+              onClick={handleActionConfirm}
+              disabled={actionProcessing}
+            >
+              {actionMeta?.confirmLabel}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Account reactivation confirmation */}
+      <Dialog
+        open={reactivateAccount !== null}
+        onOpenChange={(open) => !open && setReactivateAccount(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Reactivate &ldquo;{reactivateAccount?.accountName}&rdquo;?
+            </DialogTitle>
             <DialogDescription>
-              This will permanently delete{" "}
-              <span className="font-medium text-foreground">
-                {customer.email}
-              </span>{" "}
-              and all their data, including all account memberships. This cannot
-              be undone.
+              This will cancel the scheduled deletion. The account and all its
+              data will be preserved.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setReactivateAccount(null)}
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Yes, delete customer
+            <Button onClick={handleReactivateAccount}>
+              Reactivate account
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -27,6 +27,7 @@ import AdminLayout from "@/layouts/admin-layout"
 interface Counts {
   all: number
   active: number
+  cancelled: number
   suspended: number
 }
 
@@ -55,7 +56,7 @@ function buildParams(filters: Filters, page?: number) {
   return params
 }
 
-const STATUS_TABS = ["all", "active", "suspended"]
+const STATUS_TABS = ["all", "active", "cancelled", "suspended"]
 
 export default function AdminCustomersIndex({
   customers,
@@ -76,6 +77,7 @@ export default function AdminCustomersIndex({
   const tabs = [
     { id: "all", label: `All (${counts.all})` },
     { id: "active", label: `Active (${counts.active})` },
+    { id: "cancelled", label: `Cancelled (${counts.cancelled})` },
     { id: "suspended", label: `Suspended (${counts.suspended})` },
   ]
 
@@ -127,12 +129,6 @@ export default function AdminCustomersIndex({
         data: { ids },
         preserveState: false,
       })
-    } else if (action === "delete") {
-      router.post(
-        "/admin/customers/bulk_deletion",
-        { ids },
-        { preserveState: false }
-      )
     }
 
     setBulkDialog(null)
@@ -142,7 +138,7 @@ export default function AdminCustomersIndex({
     { id: "email", label: "Customer", sortable: true },
     { id: "auth_method", label: "Auth" },
     { id: "staff", label: "Staff" },
-    { id: "status", label: "Status" },
+    { id: "status", label: "Login" },
     { id: "accounts_count", label: "Accounts" },
     { id: "created_at", label: "Joined", sortable: true },
   ]
@@ -219,27 +215,19 @@ export default function AdminCustomersIndex({
               },
               {
                 key: "reactivate",
-                label: "Reactivate",
+                label: "Unsuspend",
                 onAction: (ids) => handleBulkAction("reactivate", ids),
-              },
-              {
-                key: "more-actions",
-                label: "More",
-                menu: [
-                  {
-                    key: "delete",
-                    label: "Delete",
-                    destructive: true,
-                    onAction: (ids) => handleBulkAction("delete", ids),
-                  },
-                ],
               },
             ]}
             emptyState={
               <div>
                 <p className="text-muted-foreground">No customers found</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Customers will appear here once they sign up.
+                  {filters.query
+                    ? "Try a different search term."
+                    : filters.status !== "all"
+                      ? "No customers match this filter."
+                      : "Customers will appear here once they sign up."}
                 </p>
               </div>
             }
@@ -255,35 +243,24 @@ export default function AdminCustomersIndex({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {bulkDialog?.action === "delete"
-                ? "Delete customers?"
-                : bulkDialog?.action === "suspend"
-                  ? "Suspend customers?"
-                  : "Reactivate customers?"}
+              {bulkDialog?.action === "suspend"
+                ? "Suspend customers?"
+                : "Unsuspend customers?"}
             </DialogTitle>
             <DialogDescription>
-              {bulkDialog?.action === "delete"
-                ? `This will permanently delete ${bulkDialog.ids.length} customer(s) and all their data. This cannot be undone.`
-                : bulkDialog?.action === "suspend"
-                  ? `This will suspend ${bulkDialog?.ids.length} customer(s). They will not be able to sign in.`
-                  : `This will reactivate ${bulkDialog?.ids.length} customer(s).`}
+              {bulkDialog?.action === "suspend"
+                ? `This will suspend ${bulkDialog?.ids.length} customer(s). They will not be able to sign in.`
+                : `This will restore sign-in access for ${bulkDialog?.ids.length} suspended customer(s).`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setBulkDialog(null)}>
               Cancel
             </Button>
-            <Button
-              variant={
-                bulkDialog?.action === "delete" ? "destructive" : "default"
-              }
-              onClick={executeBulkAction}
-            >
-              {bulkDialog?.action === "delete"
-                ? "Yes, delete"
-                : bulkDialog?.action === "suspend"
-                  ? "Yes, suspend"
-                  : "Yes, reactivate"}
+            <Button onClick={executeBulkAction}>
+              {bulkDialog?.action === "suspend"
+                ? "Yes, suspend"
+                : "Yes, unsuspend"}
             </Button>
           </DialogFooter>
         </DialogContent>

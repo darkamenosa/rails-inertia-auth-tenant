@@ -19,7 +19,7 @@ module Admin
         identity = Identity.find(params[:customer_id])
 
         identity.reactivate
-        redirect_to admin_customer_path(identity), notice: "Customer reactivated."
+        redirect_to admin_customer_path(identity), notice: "Customer unsuspended."
       end
     end
   end

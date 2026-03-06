@@ -3,12 +3,13 @@ import type { SharedProps } from "@/types"
 import {
   CreditCard,
   EllipsisVertical,
+  KeyRound,
   LogOut,
   Shield,
   UserCircle,
 } from "lucide-react"
 
-import { withAccountScope } from "@/lib/account-scope"
+import { withAccountScope, withCurrentAccountScope } from "@/lib/account-scope"
 import { userInitials } from "@/lib/user-initials"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
@@ -29,13 +30,19 @@ import {
 
 export function NavUser() {
   const page = usePage<SharedProps>()
-  const { currentUser } = page.props
+  const { currentUser, currentIdentity } = page.props
   const { isMobile } = useSidebar()
-  const scopedPath = (path: string) => withAccountScope(page.url, path)
+  const accountId = currentUser?.accountId ?? currentIdentity?.defaultAccountId
+  const role = currentUser?.role ?? currentIdentity?.defaultAccountRole
+  const scopedPath = (path: string) =>
+    withAccountScope(page.url, path, accountId)
+  const canManageAccount = role === "admin" || role === "owner"
 
-  const name = currentUser?.name ?? "User"
-  const email = currentUser?.email ?? "user@example.com"
-  const initials = currentUser?.name ? userInitials(currentUser.name) : "U"
+  const displayName = currentUser?.name ?? currentIdentity?.name
+  const name = displayName ?? "User"
+  const email =
+    currentUser?.email ?? currentIdentity?.email ?? "user@example.com"
+  const initials = displayName ? userInitials(displayName) : "U"
 
   return (
     <SidebarMenu>
@@ -85,14 +92,26 @@ export function NavUser() {
                 <UserCircle />
                 Settings
               </DropdownMenuItem>
+              {canManageAccount && (
+                <DropdownMenuItem
+                  onClick={() => router.visit(scopedPath("/app/billing"))}
+                >
+                  <CreditCard />
+                  Billing
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
-                onClick={() => router.visit(scopedPath("/app/billing"))}
+                onClick={() =>
+                  router.visit(
+                    withCurrentAccountScope(page.url, "/app/access_tokens")
+                  )
+                }
               >
-                <CreditCard />
-                Billing
+                <KeyRound />
+                Access Tokens
               </DropdownMenuItem>
             </DropdownMenuGroup>
-            {currentUser?.staff && (
+            {(currentUser?.staff ?? currentIdentity?.staff) && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>

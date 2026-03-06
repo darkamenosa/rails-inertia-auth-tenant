@@ -14,7 +14,7 @@ module AccountSlug
       env["enlead.account_id"] = extract_account_id(request)
 
       if env["enlead.account_id"]
-        account = Account.find_by(id: env["enlead.account_id"])
+        account = Account.find_by(external_account_id: env["enlead.account_id"])
         Current.with_account(account) { @app.call env }
       else
         Current.without_account { @app.call env }
