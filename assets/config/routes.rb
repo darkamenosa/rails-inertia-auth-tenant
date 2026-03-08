@@ -56,7 +56,7 @@ Rails.application.routes.draw do
         resource :billing, only: :show
       end
     end
-    mount MissionControl::Jobs::Engine, at: "/admin/jobs"
+    mount MissionControl::Jobs::Engine, at: "/admin/jobs" if defined?(MissionControl::Jobs::Engine)
   end
   get "admin", to: redirect("/admin/dashboard")
 
