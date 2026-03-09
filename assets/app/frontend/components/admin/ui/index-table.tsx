@@ -18,6 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
@@ -294,34 +295,36 @@ function SortDropdown({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
+      <DropdownMenuTrigger render={<Button
           variant="ghost"
           size="icon"
           className="size-7"
           disabled={disabled}
-        >
+        />}>
           <ArrowUpDown className="size-4" />
           <span className="sr-only">Sort</span>
-        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuLabel className="text-xs">Sort by</DropdownMenuLabel>
-        {options.map((option) => (
-          <DropdownMenuItem
-            key={option.value}
-            onClick={() => onChange([option.value])}
-            className="flex items-center justify-between"
-          >
-            <span>{option.label}</span>
-            <span className="flex items-center gap-1 text-muted-foreground">
-              {option.directionLabel && (
-                <span className="text-xs">{option.directionLabel}</span>
-              )}
-              {selectedValue === option.value && <Check className="size-3.5" />}
-            </span>
-          </DropdownMenuItem>
-        ))}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="text-xs">Sort by</DropdownMenuLabel>
+          {options.map((option) => (
+            <DropdownMenuItem
+              key={option.value}
+              onClick={() => onChange([option.value])}
+              className="flex items-center justify-between"
+            >
+              <span>{option.label}</span>
+              <span className="flex items-center gap-1 text-muted-foreground">
+                {option.directionLabel && (
+                  <span className="text-xs">{option.directionLabel}</span>
+                )}
+                {selectedValue === option.value && (
+                  <Check className="size-3.5" />
+                )}
+              </span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -458,11 +461,8 @@ export function IndexTable<T>({
                       <div className="flex h-[18px] flex-wrap items-center gap-2">
                         {selectable && (
                           <Checkbox
-                            checked={
-                              someSelected && !allSelected
-                                ? "indeterminate"
-                                : allSelected
-                            }
+                            checked={allSelected}
+                            indeterminate={someSelected && !allSelected}
                             onCheckedChange={toggleSelectAll}
                             aria-label="Select all"
                             className="size-3.5"
@@ -471,14 +471,12 @@ export function IndexTable<T>({
 
                         {/* Selection count dropdown */}
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
+                          <DropdownMenuTrigger render={<button
                               type="button"
                               className="flex h-[18px] items-center gap-1 rounded-sm bg-muted/60 px-2 text-xs leading-none font-medium text-foreground hover:bg-muted"
-                            >
+                            />}>
                               {selectionLabel}
                               <ChevronDown className="size-3 text-muted-foreground" />
-                            </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="start">
                             <DropdownMenuItem onClick={selectAll}>
@@ -494,8 +492,7 @@ export function IndexTable<T>({
                         {regularActions.map((action) =>
                           action.menu && action.menu.length > 0 ? (
                             <DropdownMenu key={action.key}>
-                              <DropdownMenuTrigger asChild>
-                                <button
+                              <DropdownMenuTrigger render={<button
                                   type="button"
                                   className={cn(
                                     "flex h-[18px] items-center gap-1 rounded-sm bg-muted/60 px-2 text-xs leading-none font-medium hover:bg-muted",
@@ -503,10 +500,9 @@ export function IndexTable<T>({
                                       ? "text-destructive"
                                       : "text-foreground"
                                   )}
-                                >
+                                />}>
                                   {action.label}
                                   <ChevronDown className="size-3" />
-                                </button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="start">
                                 {action.menu.map((item) => (
@@ -554,14 +550,12 @@ export function IndexTable<T>({
                         {/* More actions */}
                         {moreActions.map((action) => (
                           <DropdownMenu key={action.key}>
-                            <DropdownMenuTrigger asChild>
-                              <button
+                            <DropdownMenuTrigger render={<button
                                 type="button"
                                 className="flex h-[18px] items-center rounded-sm bg-muted/60 px-1 text-muted-foreground hover:bg-muted hover:text-foreground"
                                 aria-label="More actions"
-                              >
+                              />}>
                                 <MoreHorizontal className="size-3.5" />
-                              </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               {action.menu?.map((item) => (
@@ -628,11 +622,8 @@ export function IndexTable<T>({
                       )}
                     >
                       <Checkbox
-                        checked={
-                          someSelected && !allSelected
-                            ? "indeterminate"
-                            : allSelected
-                        }
+                        checked={allSelected}
+                        indeterminate={someSelected && !allSelected}
                         onCheckedChange={toggleSelectAll}
                         aria-label="Select all"
                         className="size-3.5"

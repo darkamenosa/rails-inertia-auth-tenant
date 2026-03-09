@@ -53,29 +53,24 @@ export function NavMain({
           item.items && item.items.length > 0 ? (
             <Collapsible
               key={item.title}
-              asChild
               defaultOpen={item.isActive || isGroupActive(currentUrl, item)}
               className="group/collapsible"
             >
               <SidebarMenuItem>
-                <CollapsibleTrigger asChild>
-                  <SidebarMenuButton tooltip={item.title}>
+                <CollapsibleTrigger render={<SidebarMenuButton tooltip={item.title} />}>
                     {item.icon && <item.icon />}
                     <span>{item.title}</span>
                     <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                  </SidebarMenuButton>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <SidebarMenuSub>
                     {item.items.map((subItem) => (
                       <SidebarMenuSubItem key={subItem.title}>
                         <SidebarMenuSubButton
-                          asChild
+                          render={<Link href={subItem.url} />}
                           isActive={isActive(currentUrl, subItem.url)}
                         >
-                          <Link href={subItem.url}>
-                            <span>{subItem.title}</span>
-                          </Link>
+                          <span>{subItem.title}</span>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
                     ))}
@@ -86,21 +81,22 @@ export function NavMain({
           ) : (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton
-                asChild
+                render={
+                  item.external ? (
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    />
+                  ) : (
+                    <Link href={item.url} />
+                  )
+                }
                 tooltip={item.title}
                 isActive={isActive(currentUrl, item.url)}
               >
-                {item.external ? (
-                  <a href={item.url} target="_blank" rel="noopener noreferrer">
-                    {item.icon && <item.icon />}
-                    <span>{item.title}</span>
-                  </a>
-                ) : (
-                  <Link href={item.url}>
-                    {item.icon && <item.icon />}
-                    <span>{item.title}</span>
-                  </Link>
-                )}
+                {item.icon && <item.icon />}
+                <span>{item.title}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           )

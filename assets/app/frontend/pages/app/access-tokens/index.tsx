@@ -117,11 +117,9 @@ function CreateTokenDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm">
+      <DialogTrigger render={<Button size="sm" />}>
           <Plus className="size-4" />
           Generate token
-        </Button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={handleSubmit}>

@@ -232,10 +232,8 @@ function DangerZoneSection() {
           <p className="text-xs text-muted-foreground">{currentUser?.email}</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button variant="destructive" size="sm">
+          <DialogTrigger render={<Button variant="destructive" size="sm" />}>
               {isOwner ? "Cancel account" : "Leave account"}
-            </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
